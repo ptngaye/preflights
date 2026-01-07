@@ -1,6 +1,6 @@
 [project]
 name = "preflights"
-version = "1.0.1"
+version = "1.0.2"
 description = "Clarify decisions before AI-assisted coding"
 readme = "README.md"
 requires-python = ">=3.11"
