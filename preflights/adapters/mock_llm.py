@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from preflights.app.types import Question
+from preflights.application.types import Question
 from preflights.core.types import DecisionPatch, HeuristicsConfig
 
 # Canonical value for "Other" option - MUST remain constant across all locales

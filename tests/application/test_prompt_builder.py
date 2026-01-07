@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from preflights.app.prompt_builder import (
+from preflights.application.prompt_builder import (
     AGENT_PROMPT_PATH,
     build_agent_prompt,
     extract_prompt_content,

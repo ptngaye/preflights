@@ -12,8 +12,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from preflights.app.preflights_app import PreflightsApp
-from preflights.app.types import (
+from preflights.application.preflights_app import PreflightsApp
+from preflights.application.types import (
     PreflightArtifacts,
     PreflightContinueResult,
     PreflightError,

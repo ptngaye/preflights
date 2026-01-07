@@ -53,7 +53,7 @@ from preflights.cli.state import (
 from preflights.cli.validation import parse_key_value_answers, validate_answer
 
 if TYPE_CHECKING:
-    from preflights.app.types import Question
+    from preflights.application.types import Question
 
 # Session duration in minutes
 SESSION_DURATION_MINUTES = 30
@@ -109,7 +109,7 @@ def _run_interactive_loop(repo_root: str, state: SessionState) -> None:
     3. Call continue_preflight
     4. Repeat until completed or error
     """
-    from preflights.app import continue_preflight
+    from preflights.application import continue_preflight
 
     while True:
         # Get unanswered questions (excluding __other conditional questions)
@@ -247,7 +247,7 @@ def start(intention: str, repo_path: str | None, non_interactive: bool, json_out
                 delete_session(repo_root)
 
         # 3. Call Application API
-        from preflights.app import start_preflight
+        from preflights.application import start_preflight
 
         result = start_preflight(intention, repo_root)
 
@@ -372,7 +372,7 @@ def answer(
         save_session(repo_root, state)
 
         # 6. Call Application API
-        from preflights.app import continue_preflight
+        from preflights.application import continue_preflight
 
         result = continue_preflight(state.session_id, validated_answers)
 
@@ -539,7 +539,7 @@ def resume(repo_path: str | None, non_interactive: bool, json_output: bool) -> N
             click.echo("")
 
         # 5. Call Application API
-        from preflights.app import start_preflight
+        from preflights.application import start_preflight
 
         result = start_preflight(intention, repo_root)
 

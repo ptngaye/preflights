@@ -15,7 +15,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from preflights.app.preflights_app import PreflightsApp
+from preflights.application.preflights_app import PreflightsApp
 
 
 class RepoNotFoundError(Exception):
@@ -58,7 +58,7 @@ def discover_repo_root(start_path: str | None = None) -> str:
     )
 
 
-from preflights.app.types import PreflightArtifacts, Question
+from preflights.application.types import PreflightArtifacts, Question
 from preflights.mcp.types import (
     ArchitectureResult,
     CompletedResult,

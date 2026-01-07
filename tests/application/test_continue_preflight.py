@@ -11,8 +11,8 @@ import pytest
 
 from preflights.adapters.fixed_clock import FixedClockProvider
 from preflights.adapters.mock_llm import MockLLMAdapter
-from preflights.app.preflights_app import PreflightsApp
-from preflights.app.types import AppErrorCode
+from preflights.application.preflights_app import PreflightsApp
+from preflights.application.types import AppErrorCode
 
 
 class TestContinuePreflightBasic:
@@ -70,7 +70,7 @@ class TestContinuePreflightAnswerMerging:
         llm_adapter: MockLLMAdapter,
     ) -> None:
         """Answers from multiple calls are accumulated."""
-        from preflights.app.types import Question
+        from preflights.application.types import Question
 
         # Given: A session with two required questions
         llm_adapter.set_questions([
@@ -108,7 +108,7 @@ class TestContinuePreflightAnswerMerging:
         llm_adapter: MockLLMAdapter,
     ) -> None:
         """Multi-choice answers with list format are accepted."""
-        from preflights.app.types import Question
+        from preflights.application.types import Question
 
         # Given: A session with a multi-choice question
         llm_adapter.set_questions([
@@ -146,7 +146,7 @@ class TestContinuePreflightNeedsMoreAnswers:
         llm_adapter: MockLLMAdapter,
     ) -> None:
         """Returns needs_more_answers when required questions unanswered."""
-        from preflights.app.types import Question
+        from preflights.application.types import Question
 
         # Given: A session with two required questions
         llm_adapter.set_questions([
@@ -173,7 +173,7 @@ class TestContinuePreflightNeedsMoreAnswers:
         llm_adapter: MockLLMAdapter,
     ) -> None:
         """Optional questions don't block completion."""
-        from preflights.app.types import Question
+        from preflights.application.types import Question
 
         # Given: A session with one required and one optional question
         llm_adapter.set_questions([

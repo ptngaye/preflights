@@ -12,8 +12,8 @@ import pytest
 from preflights.adapters.fixed_clock import FixedClockProvider
 from preflights.adapters.mock_llm import MockLLMAdapter
 from preflights.adapters.simple_file_context import SimpleFileContextBuilder
-from preflights.app.preflights_app import PreflightAppError, PreflightsApp
-from preflights.app.types import AppErrorCode
+from preflights.application.preflights_app import PreflightAppError, PreflightsApp
+from preflights.application.types import AppErrorCode
 from preflights.core.types import FileContext
 
 

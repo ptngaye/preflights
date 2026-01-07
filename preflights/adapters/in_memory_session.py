@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from preflights.app.types import Session
+from preflights.application.types import Session
 
 
 class SessionNotFoundError(Exception):

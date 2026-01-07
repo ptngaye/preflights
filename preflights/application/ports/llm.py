@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from preflights.app.types import Question
+from preflights.application.types import Question
 from preflights.core.types import DecisionPatch, HeuristicsConfig
 
 

@@ -11,15 +11,15 @@ This module coordinates Core, Adapters, and manages the multi-turn flow.
 from __future__ import annotations
 
 from preflights.adapters.in_memory_session import InMemorySessionAdapter
-from preflights.app.ports.clock import ClockPort
-from preflights.app.ports.config import ConfigLoaderPort
-from preflights.app.ports.file_context import FileContextBuilderPort
-from preflights.app.ports.filesystem import FilesystemPort, ParseError
-from preflights.app.ports.llm import LLMPort
-from preflights.app.ports.session import SessionPort
-from preflights.app.ports.uid import UIDProviderPort
-from preflights.app.prompt_builder import AGENT_PROMPT_PATH, build_agent_prompt
-from preflights.app.types import (
+from preflights.application.ports.clock import ClockPort
+from preflights.application.ports.config import ConfigLoaderPort
+from preflights.application.ports.file_context import FileContextBuilderPort
+from preflights.application.ports.filesystem import FilesystemPort, ParseError
+from preflights.application.ports.llm import LLMPort
+from preflights.application.ports.session import SessionPort
+from preflights.application.ports.uid import UIDProviderPort
+from preflights.application.prompt_builder import AGENT_PROMPT_PATH, build_agent_prompt
+from preflights.application.types import (
     AppErrorCode,
     PreflightArtifacts,
     PreflightContinueResult,

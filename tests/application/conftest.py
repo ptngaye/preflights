@@ -18,7 +18,7 @@ from preflights.adapters.in_memory_session import InMemorySessionAdapter
 from preflights.adapters.mock_llm import MockLLMAdapter
 from preflights.adapters.sequential_uid import SequentialUIDProvider
 from preflights.adapters.simple_file_context import SimpleFileContextBuilder
-from preflights.app.preflights_app import PreflightsApp
+from preflights.application.preflights_app import PreflightsApp
 from preflights.core.types import FileContext, HeuristicsConfig, default_v1_heuristics
 
 if TYPE_CHECKING:
