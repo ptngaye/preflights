@@ -313,3 +313,28 @@ def print_app_error(
         if hint:
             click.echo("", err=True)
             click.echo(f"\U0001f4a1 Hint: {hint}", err=True)
+
+
+def print_llm_fallback_warning(
+    reason: str,
+    json_output: bool = False,
+) -> None:
+    """Display warning when LLM falls back to mock.
+
+    This warning is visible to inform the user that the real LLM
+    is unavailable and deterministic mock mode is being used instead.
+    """
+    if json_output:
+        output: dict[str, Any] = {
+            "warning": "llm_fallback",
+            "message": f"LLM unavailable ({reason}), using deterministic mode",
+        }
+        click.echo(json.dumps(output, indent=2), err=True)
+    else:
+        click.echo(
+            click.style(
+                f"\u26a0 Warning: LLM unavailable ({reason}), using deterministic mode",
+                fg="yellow",
+            ),
+            err=True,
+        )

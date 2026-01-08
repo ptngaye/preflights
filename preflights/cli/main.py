@@ -31,6 +31,7 @@ from preflights.cli.output import (
     print_app_error,
     print_completed,
     print_error,
+    print_llm_fallback_warning,
     print_needs_clarification,
     print_needs_more_answers,
     print_start_success,
@@ -218,7 +219,31 @@ def app() -> None:
     help="Show questions and exit (for scripts/CI)",
 )
 @click.option("--json", "json_output", is_flag=True, help="Output machine-readable JSON (implies --non-interactive)")
-def start(intention: str, repo_path: str | None, non_interactive: bool, json_output: bool) -> None:
+@click.option(
+    "--llm",
+    is_flag=True,
+    help="Enable real LLM provider (requires API key in environment)",
+)
+@click.option(
+    "--llm-strict",
+    is_flag=True,
+    help="Fail on LLM errors instead of falling back to mock",
+)
+@click.option(
+    "--llm-provider",
+    type=click.Choice(["anthropic", "openai", "openrouter"]),
+    default=None,
+    help="Override LLM provider (implies --llm)",
+)
+def start(
+    intention: str,
+    repo_path: str | None,
+    non_interactive: bool,
+    json_output: bool,
+    llm: bool,
+    llm_strict: bool,
+    llm_provider: str | None,
+) -> None:
     """Start a new preflight session.
 
     INTENTION is the user's goal (e.g., "Add OAuth authentication").
@@ -227,10 +252,17 @@ def start(intention: str, repo_path: str | None, non_interactive: bool, json_out
     until the preflight is complete.
 
     Use --non-interactive or --json for scripts and CI.
+
+    Use --llm to enable real LLM providers (requires API key).
+    Use --llm-strict to fail on LLM errors instead of falling back to mock.
     """
     # --json implies non-interactive
     if json_output:
         non_interactive = True
+
+    # --llm-provider implies --llm
+    if llm_provider:
+        llm = True
 
     try:
         # 1. Discover repository root
@@ -246,12 +278,22 @@ def start(intention: str, repo_path: str | None, non_interactive: bool, json_out
                 # Session expired, delete and continue
                 delete_session(repo_root)
 
-        # 3. Call Application API
-        from preflights.application import start_preflight
+        # 3. Configure LLM if requested
+        if llm or llm_provider:
+            from preflights.application import configure_llm
+
+            configure_llm(provider=llm_provider, strict_mode=llm_strict)
+
+        # 4. Call Application API
+        from preflights.application import get_llm_fallback_status, start_preflight
 
         result = start_preflight(intention, repo_root)
 
-        # 4. Store session state
+        # 5. Check for LLM fallback and warn user
+        if (llm or llm_provider) and get_llm_fallback_status():
+            print_llm_fallback_warning("credentials missing or provider error", json_output)
+
+        # 6. Store session state
         state = _create_session_state(
             session_id=result.session_id,
             intention=intention,
@@ -507,14 +549,42 @@ def status(repo_path: str | None, json_output: bool) -> None:
     help="Show questions and exit (for scripts/CI)",
 )
 @click.option("--json", "json_output", is_flag=True, help="Output machine-readable JSON (implies --non-interactive)")
-def resume(repo_path: str | None, non_interactive: bool, json_output: bool) -> None:
+@click.option(
+    "--llm",
+    is_flag=True,
+    help="Enable real LLM provider (requires API key in environment)",
+)
+@click.option(
+    "--llm-strict",
+    is_flag=True,
+    help="Fail on LLM errors instead of falling back to mock",
+)
+@click.option(
+    "--llm-provider",
+    type=click.Choice(["anthropic", "openai", "openrouter"]),
+    default=None,
+    help="Override LLM provider (implies --llm)",
+)
+def resume(
+    repo_path: str | None,
+    non_interactive: bool,
+    json_output: bool,
+    llm: bool,
+    llm_strict: bool,
+    llm_provider: str | None,
+) -> None:
     """Resume after session expiration or error.
 
     By default, runs in interactive mode.
+    Use --llm to enable real LLM providers.
     """
     # --json implies non-interactive
     if json_output:
         non_interactive = True
+
+    # --llm-provider implies --llm
+    if llm_provider:
+        llm = True
 
     try:
         # 1. Discover repository root
@@ -533,17 +603,27 @@ def resume(repo_path: str | None, non_interactive: bool, json_output: bool) -> N
         # 3. Load last intention
         intention = load_last_intention(repo_root)
 
-        # 4. Output resuming message
+        # 4. Configure LLM if requested
+        if llm or llm_provider:
+            from preflights.application import configure_llm
+
+            configure_llm(provider=llm_provider, strict_mode=llm_strict)
+
+        # 5. Output resuming message
         if not json_output:
             click.echo(click.style(f'Resuming: "{intention}"', fg="green", bold=True))
             click.echo("")
 
-        # 5. Call Application API
-        from preflights.application import start_preflight
+        # 6. Call Application API
+        from preflights.application import get_llm_fallback_status, start_preflight
 
         result = start_preflight(intention, repo_root)
 
-        # 6. Store session state
+        # 7. Check for LLM fallback and warn user
+        if (llm or llm_provider) and get_llm_fallback_status():
+            print_llm_fallback_warning("credentials missing or provider error", json_output)
+
+        # 8. Store session state
         state = _create_session_state(
             session_id=result.session_id,
             intention=intention,
@@ -551,12 +631,12 @@ def resume(repo_path: str | None, non_interactive: bool, json_output: bool) -> N
         )
         save_session(repo_root, state)
 
-        # 7. Non-interactive mode: display and exit
+        # 9. Non-interactive mode: display and exit
         if non_interactive:
             print_start_success(state, json_output)
             return
 
-        # 8. Interactive mode: run loop
+        # 10. Interactive mode: run loop
         _run_interactive_loop(repo_root, state)
 
     except CLIError as e:

@@ -25,6 +25,18 @@ dev = [
     "hypothesis>=6.0",
 ]
 
+# LLM provider dependencies (BYOK - Bring Your Own Key)
+anthropic = [
+    "anthropic>=0.40.0",
+]
+openai = [
+    "openai>=1.50.0",
+]
+llm = [
+    "anthropic>=0.40.0",
+    "openai>=1.50.0",
+]
+
 [project.scripts]
 preflights = "preflights.cli.main:main"
 pf = "preflights.cli.main:main"

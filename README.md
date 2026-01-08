@@ -17,6 +17,18 @@ It forces clarification, captures architectural decisions, and produces a clear 
 Think of it as a pre-flight checklist for AI-assisted development.
 
 ---
+## How Preflights uses AI (and how it doesn’t)
+
+Preflights may optionally use an LLM **only** to generate clarification questions and progress signals.
+
+It never:
+- generates code
+- makes architectural decisions
+- writes files directly
+- replaces deterministic logic
+
+All decisions, validations, and artifacts are produced by a deterministic core.
+The LLM is treated as an interchangeable clarification engine — not an authority.
 
 ## Why Preflights exists
 
@@ -61,6 +73,9 @@ Preflights will:
 
 That's it.
 
+Preflights is fully open-source and does not provide or manage any AI service.
+If an LLM is used, it is always configured locally by the user (Bring Your Own Key).
+
 ---
 
 ## Installation
@@ -87,6 +102,12 @@ pip install -e .
 ---
 
 ## Usage — the Golden Path (recommended)
+
+By default, Preflights runs in a fully deterministic mode and does not call any external LLM.
+This mode is always available and acts as a safety net.
+
+An optional LLM-backed clarification mode can be enabled for richer question generation,
+while keeping Preflights fully functional without it.
 
 1. Run Preflights from a git repository
    ```bash
