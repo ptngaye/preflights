@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
-from preflights.application.types import Question
+from preflights.application.types import LLMContext, LLMResponse, Question, SessionSnapshot
 from preflights.core.types import DecisionPatch, HeuristicsConfig
+
+if TYPE_CHECKING:
+    pass
 
 # Canonical value for "Other" option - MUST remain constant across all locales
 OTHER_SPECIFY = "Other (specify)"
@@ -17,6 +20,7 @@ class MockLLMAdapter:
 
     Returns fixed questions and patches based on keywords in intention.
     Used for testing without calling real LLM.
+    Also serves as fallback when real LLM is unavailable.
     """
 
     def __init__(
@@ -34,6 +38,12 @@ class MockLLMAdapter:
         self._force_invalid_patch = force_invalid_patch
         self._force_extraction_failure = force_extraction_failure
         self._override_questions: tuple[Question, ...] | None = None
+        self._is_fallback: bool = False  # Set by factory when used as fallback
+
+    @property
+    def is_fallback(self) -> bool:
+        """Check if this adapter is being used as a fallback."""
+        return self._is_fallback
 
     def set_questions(self, questions: list[Question]) -> None:
         """Set override questions for testing."""
@@ -105,15 +115,26 @@ class MockLLMAdapter:
         self,
         intention: str,
         heuristics_config: HeuristicsConfig,
-        context: str | None = None,
-    ) -> tuple[Question, ...]:
-        """Generate deterministic questions based on keywords."""
+        context: LLMContext | None = None,
+        session_state: SessionSnapshot | None = None,
+    ) -> LLMResponse:
+        """Generate deterministic questions based on keywords.
+
+        Returns LLMResponse with questions and semantic tracking fields.
+        """
         # Use override if set
         if self._override_questions is not None:
-            return self._override_questions
+            override_questions = self._override_questions
+            return LLMResponse(
+                questions=override_questions,
+                missing_info=tuple(q.id for q in override_questions if not q.depends_on_question_id),
+                decision_hint="unsure",
+                progress=0.5,
+            )
 
         intention_lower = intention.lower()
         questions: list[Question] = []
+        decision_hint: Literal["task", "adr", "unsure"] = "unsure"
 
         # Auth-related questions
         if any(kw in intention_lower for kw in ["auth", "login", "oauth"]):
@@ -131,6 +152,7 @@ class MockLLMAdapter:
                     ("next-auth", "passport", "custom"),
                 )
             )
+            decision_hint = "adr"  # Auth is typically architectural
 
         # Database-related questions
         elif any(kw in intention_lower for kw in ["database", "db", "postgres", "sql"]):
@@ -148,6 +170,7 @@ class MockLLMAdapter:
                     ("Prisma", "TypeORM", "Drizzle"),
                 )
             )
+            decision_hint = "adr"  # Database is typically architectural
 
         # Frontend-related questions
         elif any(kw in intention_lower for kw in ["frontend", "ui", "react", "component"]):
@@ -165,6 +188,7 @@ class MockLLMAdapter:
                     ("Tailwind", "CSS Modules", "Styled Components"),
                 )
             )
+            decision_hint = "task"  # Frontend changes are often tasks
 
         # Default: generic questions
         else:
@@ -183,8 +207,19 @@ class MockLLMAdapter:
                     optional=False,
                 )
             )
+            decision_hint = "unsure"
 
-        return tuple(questions)
+        # Build missing_info from non-conditional questions
+        missing_info = tuple(
+            q.id for q in questions if not q.depends_on_question_id
+        )
+
+        return LLMResponse(
+            questions=tuple(questions),
+            missing_info=missing_info,
+            decision_hint=decision_hint,
+            progress=0.5,  # Mock always returns 50% progress
+        )
 
     def extract_decision_patch(
         self,
