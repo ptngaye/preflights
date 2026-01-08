@@ -43,7 +43,7 @@ Use the submit_clarification tool with:
 
 IMPORTANT:
 - Each question MUST have a corresponding entry in missing_info (1:1 mapping)
-- missing_info keys should be stable semantic identifiers (e.g., "auth_strategy", "db_choice")
+- missing_info keys should be stable semantic identifiers (e.g., "auth_strategy", "db_type")
 - decision_hint is purely informative - the actual decision is made deterministically by Preflights
 - progress MUST be 1.0 when no missing_info remains
 """

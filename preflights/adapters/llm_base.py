@@ -21,6 +21,10 @@ from preflights.adapters.llm_prompts import (
     DECISION_TOOL_SCHEMA,
     EXTRACTION_SYSTEM_PROMPT,
 )
+from preflights.adapters.llm_validation import (
+    validate_and_repair_clarification,
+    validate_and_repair_decision,
+)
 from preflights.application.llm_config import DEFAULT_MODELS, LLMConfig
 from preflights.application.types import (
     LLMContext,
@@ -220,45 +224,46 @@ class BaseLLMAdapter(ABC):
     def _parse_question_response(self, result: dict[str, Any]) -> LLMResponse:
         """Parse tool call result into LLMResponse."""
         try:
-            raw_questions = result.get("questions", [])
-            missing_info = tuple(result.get("missing_info", []))
-            decision_hint = result.get("decision_hint", "unsure")
-            progress = float(result.get("progress", 0.5))
+            # Validate and repair response (handles max questions, progress invariants, etc.)
+            validated = validate_and_repair_clarification(result)
+
+            # If validation returned LLMResponse, use it directly
+            if isinstance(validated, LLMResponse):
+                return validated
+
+            # Otherwise build from validated dict
+            raw_questions = validated.get("questions", [])
+            missing_info = tuple(validated.get("missing_info", []))
+            decision_hint = validated.get("decision_hint", "unsure")
+            progress = float(validated.get("progress", 0.5))
 
             # Validate decision_hint
             if decision_hint not in ("task", "adr", "unsure"):
                 decision_hint = "unsure"
 
-            # Clamp progress
-            progress = max(0.0, min(1.0, progress))
-
             # Parse questions
             questions: list[Question] = []
             for q in raw_questions:
-                q_type = q.get("type", "free_text")
+                q_dict = q if isinstance(q, dict) else {}
+                q_type = q_dict.get("type", "free_text")
                 if q_type not in ("single_choice", "multi_choice", "free_text"):
                     q_type = "free_text"
 
                 options = None
                 if q_type in ("single_choice", "multi_choice"):
-                    raw_options = q.get("options", [])
+                    raw_options = q_dict.get("options", [])
                     if raw_options:
                         options = tuple(str(o) for o in raw_options)
 
                 questions.append(
                     Question(
-                        id=str(q.get("id", f"q_{len(questions)}")),
+                        id=str(q_dict.get("id", f"q_{len(questions)}")),
                         type=q_type,
-                        question=str(q.get("question", "")),
+                        question=str(q_dict.get("question", "")),
                         options=options,
-                        optional=bool(q.get("optional", False)),
+                        optional=bool(q_dict.get("optional", False)),
                     )
                 )
-
-            # Ensure missing_info matches questions count
-            if len(missing_info) != len(questions):
-                # Generate missing_info from question IDs if mismatch
-                missing_info = tuple(q.id for q in questions)
 
             return LLMResponse(
                 questions=tuple(questions),
@@ -276,10 +281,20 @@ class BaseLLMAdapter(ABC):
     ) -> DecisionPatch | None:
         """Parse tool call result into DecisionPatch."""
         try:
-            category = str(result.get("category", "Other"))
-            raw_fields = result.get("fields", [])
+            # Validate and repair response
+            validated = validate_and_repair_decision(result)
 
-            # Validate category
+            # Check status - return None if insufficient
+            status = validated.get("status")
+            if status == "insufficient":
+                reason = validated.get("reason", "Unknown reason")
+                logger.info(f"LLM returned insufficient: {reason}")
+                return None
+
+            category = str(validated.get("category", "Other"))
+            raw_fields = validated.get("fields", [])
+
+            # Validate category against schema
             valid_categories = [cat for cat, _ in heuristics_config.schema.categories]
             if category not in valid_categories:
                 category = "Other"

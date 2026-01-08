@@ -38,6 +38,20 @@ ALLOWED_DECISION_CATEGORIES = frozenset({
     "Other",
 })
 
+# Defensive normalization for category aliases
+CATEGORY_ALIASES: dict[str, str] = {
+    "Infrastructure": "Infra",
+    "Auth": "Authentication",
+    "DB": "Database",
+    "UI": "Frontend",
+}
+
+
+def normalize_category(category: str) -> str:
+    """Normalize category name using aliases."""
+    return CATEGORY_ALIASES.get(category, category)
+
+
 # Patterns that indicate placeholder/guessed values (forbidden)
 PLACEHOLDER_PATTERNS = [
     r"\bTBD\b",
@@ -361,7 +375,9 @@ def validate_decision_response(
     data = dict(response)
 
     status = data.get("status")
-    category = data.get("category")
+    raw_category = data.get("category")
+    category = normalize_category(str(raw_category)) if raw_category else None
+    data["category"] = category  # Store normalized
     fields = data.get("fields", [])
     reason = data.get("reason")
 

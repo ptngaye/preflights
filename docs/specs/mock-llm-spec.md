@@ -68,7 +68,7 @@ The mock uses a **two-phase hybrid approach**:
 
 ```
 "What type of change is this?"
-Options: [Frontend, Backend, Database, Authentication, Infrastructure, Other (specify)]
+Options: [Frontend, Backend, Database, Authentication, Infra, Other (specify)]
 ```
 
 Purpose:
@@ -134,7 +134,7 @@ Question(
     type="single_choice",
     question="What type of change is this?",
     options=("Frontend", "Backend", "Database", "Authentication",
-             "Infrastructure", "Other (specify)"),
+             "Infra", "Other (specify)"),
 )
 ```
 
