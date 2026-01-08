@@ -24,7 +24,7 @@ from mcp.types import (
 )
 
 from preflights.adapters.default_config import DefaultConfigLoader
-from preflights.adapters.fake_filesystem import FakeFilesystemAdapter
+from preflights.adapters.filesystem import FilesystemAdapter
 from preflights.adapters.fixed_clock import FixedClockProvider
 from preflights.adapters.in_memory_session import InMemorySessionAdapter
 from preflights.adapters.mock_llm import MockLLMAdapter
@@ -44,13 +44,10 @@ def create_app(repo_path: str) -> PreflightsApp:
     Returns:
         Configured PreflightsApp instance
     """
-    # Use real filesystem adapter (not fake/test)
-    from pathlib import Path
-
     return PreflightsApp(
         session_adapter=InMemorySessionAdapter(),
         llm_adapter=MockLLMAdapter(),  # TODO: Replace with real LLM adapter
-        filesystem_adapter=FakeFilesystemAdapter(Path(repo_path)),
+        filesystem_adapter=FilesystemAdapter(),
         uid_provider=SequentialUIDProvider(),
         clock_provider=FixedClockProvider(),  # TODO: Replace with real clock
         file_context_builder=SimpleFileContextBuilder(),

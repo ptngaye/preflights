@@ -1,19 +1,23 @@
-"""Fake filesystem adapter for testing."""
+"""Filesystem adapter for reading/writing Preflights artifacts."""
 
 from __future__ import annotations
 
 import re
 from pathlib import Path
 
-from preflights.application.ports.filesystem import FileExistsError, FilesystemError, ParseError
+from preflights.application.ports.filesystem import (
+    FileExistsError,
+    FilesystemError,
+    ParseError,
+)
 from preflights.core.types import ADR, ArchitectureState, Task
 
 
-class FakeFilesystemAdapter:
+class FilesystemAdapter:
     """
-    Fake filesystem adapter that writes to a real directory.
+    Filesystem adapter that reads/writes Preflights artifacts.
 
-    Used for testing with pytest's tmp_path fixture.
+    Implements FilesystemPort protocol.
     Respects archive semantics and immutability rules.
     """
 
@@ -23,27 +27,12 @@ class FakeFilesystemAdapter:
     ARCHITECTURE_STATE_PATH = "docs/ARCHITECTURE_STATE.md"
     AGENT_PROMPT_PATH = "docs/AGENT_PROMPT.md"
 
-    def __init__(self, base_path: Path | None = None) -> None:
-        """
-        Initialize adapter.
-
-        Args:
-            base_path: If provided, all operations use this as root.
-                       Used for testing with tmp_path.
-        """
-        self._base_path = base_path
-        self._malformed_current_task: bool = False  # For testing parse errors
-
     def _resolve_path(self, repo_path: str, relative: str) -> Path:
-        """Resolve path relative to repo or base path."""
-        if self._base_path is not None:
-            return self._base_path / relative
+        """Resolve path relative to repo."""
         return Path(repo_path) / relative
 
     def repo_exists(self, repo_path: str) -> bool:
         """Check if repository exists."""
-        if self._base_path is not None:
-            return self._base_path.exists()
         return Path(repo_path).exists()
 
     def read_current_task(self, repo_path: str) -> Task | None:
@@ -54,15 +43,6 @@ class FakeFilesystemAdapter:
             return None
 
         content = path.read_text()
-
-        # Check for malformed content (testing hook)
-        if self._malformed_current_task:
-            raise ParseError(
-                "CURRENT_TASK.md is malformed: missing UID",
-                str(path),
-            )
-
-        # Parse task from markdown
         return self._parse_task_from_markdown(content, path)
 
     def _parse_task_from_markdown(self, content: str, path: Path) -> Task:
@@ -81,7 +61,9 @@ class FakeFilesystemAdapter:
         title = title_match.group(1) if title_match else "Untitled"
 
         # Extract other fields (simplified parsing)
-        objective_match = re.search(r"## Objective\n\n(.+?)(?=\n\n##|\Z)", content, re.DOTALL)
+        objective_match = re.search(
+            r"## Objective\n\n(.+?)(?=\n\n##|\Z)", content, re.DOTALL
+        )
         objective = objective_match.group(1).strip() if objective_match else ""
 
         context_match = re.search(r"## Context\n\n(.+?)(?=\n\n##|\Z)", content, re.DOTALL)
@@ -124,7 +106,11 @@ class FakeFilesystemAdapter:
 
     def _render_task_markdown(self, task: Task) -> str:
         """Render Task as markdown."""
-        adr_comment = f"\n<!-- Related ADR: {task.related_adr_uid} -->" if task.related_adr_uid else ""
+        adr_comment = (
+            f"\n<!-- Related ADR: {task.related_adr_uid} -->"
+            if task.related_adr_uid
+            else ""
+        )
 
         return f"""<!-- UID: {task.uid} -->
 <!-- Created: {task.created_at_utc} -->{adr_comment}
@@ -171,7 +157,9 @@ class FakeFilesystemAdapter:
         # Use existing UID for archive (NOT a new UID)
         slug = self._slugify(task.title)
         archive_filename = f"{task.uid}_{slug}.md"
-        archive_path = self._resolve_path(repo_path, f"{self.ARCHIVE_TASK_DIR}/{archive_filename}")
+        archive_path = self._resolve_path(
+            repo_path, f"{self.ARCHIVE_TASK_DIR}/{archive_filename}"
+        )
 
         # Check archive doesn't already exist
         if archive_path.exists():
@@ -212,7 +200,11 @@ class FakeFilesystemAdapter:
 
     def _render_adr_markdown(self, adr: ADR) -> str:
         """Render ADR as markdown."""
-        prev_link = f"[{adr.previous_uid}](../{adr.previous_uid}.md)" if adr.previous_uid else "_None_"
+        prev_link = (
+            f"[{adr.previous_uid}](../{adr.previous_uid}.md)"
+            if adr.previous_uid
+            else "_None_"
+        )
 
         # Render snapshot categories
         snapshot_lines: list[str] = []
@@ -368,7 +360,3 @@ Current architecture decisions snapshot.
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content)
         return self.AGENT_PROMPT_PATH
-
-    def set_malformed_current_task(self, malformed: bool) -> None:
-        """Set flag to simulate malformed CURRENT_TASK.md (for testing)."""
-        self._malformed_current_task = malformed

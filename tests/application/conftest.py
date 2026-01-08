@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from preflights.adapters.default_config import DefaultConfigLoader
-from preflights.adapters.fake_filesystem import FakeFilesystemAdapter
+from preflights.adapters.isolated_filesystem import IsolatedFilesystemAdapter
 from preflights.adapters.fixed_clock import FixedClockProvider
 from preflights.adapters.in_memory_session import InMemorySessionAdapter
 from preflights.adapters.mock_llm import MockLLMAdapter
@@ -79,9 +79,9 @@ def tmp_repo(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def filesystem_adapter(tmp_repo: Path) -> FakeFilesystemAdapter:
+def filesystem_adapter(tmp_repo: Path) -> IsolatedFilesystemAdapter:
     """Filesystem adapter for temp directory."""
-    return FakeFilesystemAdapter(tmp_repo)
+    return IsolatedFilesystemAdapter(tmp_repo)
 
 
 # =============================================================================
@@ -93,7 +93,7 @@ def filesystem_adapter(tmp_repo: Path) -> FakeFilesystemAdapter:
 def app(
     session_adapter: InMemorySessionAdapter,
     llm_adapter: MockLLMAdapter,
-    filesystem_adapter: FakeFilesystemAdapter,
+    filesystem_adapter: IsolatedFilesystemAdapter,
     uid_provider: SequentialUIDProvider,
     clock: FixedClockProvider,
     file_context_builder: SimpleFileContextBuilder,

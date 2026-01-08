@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from preflights.adapters.default_config import DefaultConfigLoader
-from preflights.adapters.fake_filesystem import FakeFilesystemAdapter
+from preflights.adapters.isolated_filesystem import IsolatedFilesystemAdapter
 from preflights.adapters.fixed_clock import FixedClockProvider
 from preflights.adapters.in_memory_session import InMemorySessionAdapter
 from preflights.adapters.mock_llm import MockLLMAdapter
@@ -40,7 +40,7 @@ def app(tmp_repo: Path) -> PreflightsApp:
     return PreflightsApp(
         session_adapter=InMemorySessionAdapter(),
         llm_adapter=MockLLMAdapter(),
-        filesystem_adapter=FakeFilesystemAdapter(tmp_repo),
+        filesystem_adapter=IsolatedFilesystemAdapter(tmp_repo),
         uid_provider=SequentialUIDProvider(),
         clock_provider=FixedClockProvider(),
         file_context_builder=SimpleFileContextBuilder(),

@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 from preflights.adapters.default_config import DefaultConfigLoader
-from preflights.adapters.fake_filesystem import FakeFilesystemAdapter
+from preflights.adapters.isolated_filesystem import IsolatedFilesystemAdapter
 from preflights.adapters.fixed_clock import FixedClockProvider
 from preflights.adapters.in_memory_session import InMemorySessionAdapter
 from preflights.adapters.mock_llm import MockLLMAdapter
@@ -35,7 +35,7 @@ class TestSessionTTL:
         app = PreflightsApp(
             session_adapter=InMemorySessionAdapter(),
             llm_adapter=llm_adapter,
-            filesystem_adapter=FakeFilesystemAdapter(tmp_repo),
+            filesystem_adapter=IsolatedFilesystemAdapter(tmp_repo),
             uid_provider=SequentialUIDProvider(),
             clock_provider=clock,
             file_context_builder=SimpleFileContextBuilder(),
@@ -66,7 +66,7 @@ class TestSessionTTL:
         app = PreflightsApp(
             session_adapter=InMemorySessionAdapter(),
             llm_adapter=llm_adapter,
-            filesystem_adapter=FakeFilesystemAdapter(tmp_repo),
+            filesystem_adapter=IsolatedFilesystemAdapter(tmp_repo),
             uid_provider=SequentialUIDProvider(),
             clock_provider=clock,
             file_context_builder=SimpleFileContextBuilder(),
@@ -95,7 +95,7 @@ class TestSessionTTL:
         app = PreflightsApp(
             session_adapter=session_adapter,
             llm_adapter=llm_adapter,
-            filesystem_adapter=FakeFilesystemAdapter(tmp_repo),
+            filesystem_adapter=IsolatedFilesystemAdapter(tmp_repo),
             uid_provider=SequentialUIDProvider(),
             clock_provider=clock,
             file_context_builder=SimpleFileContextBuilder(),
@@ -130,7 +130,7 @@ class TestParseErrors:
         app = PreflightsApp(
             session_adapter=InMemorySessionAdapter(),
             llm_adapter=llm_adapter,
-            filesystem_adapter=FakeFilesystemAdapter(tmp_repo),
+            filesystem_adapter=IsolatedFilesystemAdapter(tmp_repo),
             uid_provider=SequentialUIDProvider(),
             clock_provider=FixedClockProvider(),
             file_context_builder=SimpleFileContextBuilder(),
@@ -163,7 +163,7 @@ class TestParseErrors:
         app = PreflightsApp(
             session_adapter=InMemorySessionAdapter(),
             llm_adapter=llm_adapter,
-            filesystem_adapter=FakeFilesystemAdapter(tmp_repo),
+            filesystem_adapter=IsolatedFilesystemAdapter(tmp_repo),
             uid_provider=SequentialUIDProvider(),
             clock_provider=FixedClockProvider(),
             file_context_builder=SimpleFileContextBuilder(),
@@ -213,7 +213,7 @@ Old task objective
         app = PreflightsApp(
             session_adapter=InMemorySessionAdapter(),
             llm_adapter=llm_adapter,
-            filesystem_adapter=FakeFilesystemAdapter(tmp_repo),
+            filesystem_adapter=IsolatedFilesystemAdapter(tmp_repo),
             uid_provider=SequentialUIDProvider(),
             clock_provider=FixedClockProvider(),
             file_context_builder=SimpleFileContextBuilder(),
@@ -246,7 +246,7 @@ Old task objective
         app = PreflightsApp(
             session_adapter=InMemorySessionAdapter(),
             llm_adapter=llm_adapter,
-            filesystem_adapter=FakeFilesystemAdapter(tmp_repo),
+            filesystem_adapter=IsolatedFilesystemAdapter(tmp_repo),
             uid_provider=SequentialUIDProvider(),
             clock_provider=FixedClockProvider(),
             file_context_builder=SimpleFileContextBuilder(),
@@ -292,7 +292,7 @@ Old task objective
         app = PreflightsApp(
             session_adapter=InMemorySessionAdapter(),
             llm_adapter=llm_adapter,
-            filesystem_adapter=FakeFilesystemAdapter(tmp_repo),
+            filesystem_adapter=IsolatedFilesystemAdapter(tmp_repo),
             uid_provider=SequentialUIDProvider(),
             clock_provider=FixedClockProvider(),
             file_context_builder=SimpleFileContextBuilder(),
@@ -331,7 +331,7 @@ class TestPatchExtractionFailure:
         app = PreflightsApp(
             session_adapter=InMemorySessionAdapter(),
             llm_adapter=MockLLMAdapter(force_extraction_failure=True),
-            filesystem_adapter=FakeFilesystemAdapter(tmp_repo),
+            filesystem_adapter=IsolatedFilesystemAdapter(tmp_repo),
             uid_provider=SequentialUIDProvider(),
             clock_provider=FixedClockProvider(),
             file_context_builder=SimpleFileContextBuilder(),
@@ -363,7 +363,7 @@ class TestInvalidCategoryFromLLM:
         app = PreflightsApp(
             session_adapter=InMemorySessionAdapter(),
             llm_adapter=MockLLMAdapter(force_invalid_patch=True),
-            filesystem_adapter=FakeFilesystemAdapter(tmp_repo),
+            filesystem_adapter=IsolatedFilesystemAdapter(tmp_repo),
             uid_provider=SequentialUIDProvider(),
             clock_provider=FixedClockProvider(),
             file_context_builder=SimpleFileContextBuilder(),

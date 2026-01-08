@@ -96,7 +96,7 @@ class TestStartPreflightBasic:
     ) -> None:
         """Session expires after 30 minutes."""
         from preflights.adapters.default_config import DefaultConfigLoader
-        from preflights.adapters.fake_filesystem import FakeFilesystemAdapter
+        from preflights.adapters.isolated_filesystem import IsolatedFilesystemAdapter
         from preflights.adapters.in_memory_session import InMemorySessionAdapter
         from preflights.adapters.sequential_uid import SequentialUIDProvider
 
@@ -105,7 +105,7 @@ class TestStartPreflightBasic:
         app = PreflightsApp(
             session_adapter=InMemorySessionAdapter(),
             llm_adapter=llm_adapter,
-            filesystem_adapter=FakeFilesystemAdapter(tmp_repo),
+            filesystem_adapter=IsolatedFilesystemAdapter(tmp_repo),
             uid_provider=SequentialUIDProvider(),
             clock_provider=clock,
             file_context_builder=SimpleFileContextBuilder(),
@@ -145,7 +145,7 @@ class TestStartPreflightValidation:
     ) -> None:
         """start_preflight raises error for non-existent repository."""
         from preflights.adapters.default_config import DefaultConfigLoader
-        from preflights.adapters.fake_filesystem import FakeFilesystemAdapter
+        from preflights.adapters.isolated_filesystem import IsolatedFilesystemAdapter
         from preflights.adapters.in_memory_session import InMemorySessionAdapter
         from preflights.adapters.sequential_uid import SequentialUIDProvider
 
@@ -153,7 +153,7 @@ class TestStartPreflightValidation:
         app = PreflightsApp(
             session_adapter=InMemorySessionAdapter(),
             llm_adapter=llm_adapter,
-            filesystem_adapter=FakeFilesystemAdapter(),
+            filesystem_adapter=IsolatedFilesystemAdapter(),
             uid_provider=SequentialUIDProvider(),
             clock_provider=FixedClockProvider(),
             file_context_builder=SimpleFileContextBuilder(),
@@ -243,7 +243,7 @@ class TestStartPreflightDeterminism:
     ) -> None:
         """Same intention produces same questions with same adapters."""
         from preflights.adapters.default_config import DefaultConfigLoader
-        from preflights.adapters.fake_filesystem import FakeFilesystemAdapter
+        from preflights.adapters.isolated_filesystem import IsolatedFilesystemAdapter
         from preflights.adapters.in_memory_session import InMemorySessionAdapter
         from preflights.adapters.sequential_uid import SequentialUIDProvider
 
@@ -252,7 +252,7 @@ class TestStartPreflightDeterminism:
             return PreflightsApp(
                 session_adapter=InMemorySessionAdapter(),
                 llm_adapter=MockLLMAdapter(),
-                filesystem_adapter=FakeFilesystemAdapter(tmp_repo),
+                filesystem_adapter=IsolatedFilesystemAdapter(tmp_repo),
                 uid_provider=SequentialUIDProvider(),
                 clock_provider=FixedClockProvider(),
                 file_context_builder=SimpleFileContextBuilder(),
@@ -301,7 +301,7 @@ class TestStartPreflightWithFileContext:
     ) -> None:
         """Can inject fixed file context for testing."""
         from preflights.adapters.default_config import DefaultConfigLoader
-        from preflights.adapters.fake_filesystem import FakeFilesystemAdapter
+        from preflights.adapters.isolated_filesystem import IsolatedFilesystemAdapter
         from preflights.adapters.in_memory_session import InMemorySessionAdapter
         from preflights.adapters.sequential_uid import SequentialUIDProvider
 
@@ -316,7 +316,7 @@ class TestStartPreflightWithFileContext:
         app = PreflightsApp(
             session_adapter=InMemorySessionAdapter(),
             llm_adapter=llm_adapter,
-            filesystem_adapter=FakeFilesystemAdapter(tmp_repo),
+            filesystem_adapter=IsolatedFilesystemAdapter(tmp_repo),
             uid_provider=SequentialUIDProvider(),
             clock_provider=FixedClockProvider(),
             file_context_builder=file_context_builder,

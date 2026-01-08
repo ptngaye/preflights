@@ -25,13 +25,14 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from preflights.adapters.default_config import DefaultConfigLoader
-    from preflights.adapters.fake_filesystem import FakeFilesystemAdapter
+    from preflights.adapters.filesystem import FilesystemAdapter
     from preflights.adapters.fixed_clock import FixedClockProvider
     from preflights.adapters.in_memory_session import InMemorySessionAdapter
-    from preflights.application.ports.llm import LLMPort
     from preflights.adapters.mock_llm import MockLLMAdapter
     from preflights.adapters.sequential_uid import SequentialUIDProvider
     from preflights.adapters.simple_file_context import SimpleFileContextBuilder
+    from preflights.adapters.isolated_filesystem import IsolatedFilesystemAdapter
+    from preflights.application.ports.llm import LLMPort
 
 # Module-level default app (lazy initialized)
 _default_app: PreflightsApp | None = None
@@ -65,7 +66,7 @@ def _get_default_app() -> PreflightsApp:
     """Get or create default app instance."""
     # Import adapters lazily to avoid circular imports
     from preflights.adapters.default_config import DefaultConfigLoader
-    from preflights.adapters.fake_filesystem import FakeFilesystemAdapter
+    from preflights.adapters.filesystem import FilesystemAdapter
     from preflights.adapters.fixed_clock import FixedClockProvider
     from preflights.adapters.in_memory_session import InMemorySessionAdapter
     from preflights.adapters.mock_llm import MockLLMAdapter
@@ -89,7 +90,7 @@ def _get_default_app() -> PreflightsApp:
         _default_app = PreflightsApp(
             session_adapter=InMemorySessionAdapter(),
             llm_adapter=llm_adapter,
-            filesystem_adapter=FakeFilesystemAdapter(),
+            filesystem_adapter=FilesystemAdapter(),
             uid_provider=SequentialUIDProvider(),
             clock_provider=FixedClockProvider(),
             file_context_builder=SimpleFileContextBuilder(),
@@ -171,7 +172,7 @@ def create_app(
     *,
     session_adapter: "InMemorySessionAdapter | None" = None,
     llm_adapter: "MockLLMAdapter | None" = None,
-    filesystem_adapter: "FakeFilesystemAdapter | None" = None,
+    filesystem_adapter: "FilesystemAdapter | IsolatedFilesystemAdapter | None" = None,
     uid_provider: "SequentialUIDProvider | None" = None,
     clock_provider: "FixedClockProvider | None" = None,
     file_context_builder: "SimpleFileContextBuilder | None" = None,
@@ -191,25 +192,26 @@ def create_app(
         clock_provider: Custom clock provider
         file_context_builder: Custom file context builder
         config_loader: Custom config loader
-        base_path: If provided, create FakeFilesystemAdapter with this base path
+        base_path: If provided, create IsolatedFilesystemAdapter with this base path
 
     Returns:
         Configured PreflightsApp instance
     """
     # Import adapters lazily to avoid circular imports
     from preflights.adapters.default_config import DefaultConfigLoader
-    from preflights.adapters.fake_filesystem import FakeFilesystemAdapter
+    from preflights.adapters.filesystem import FilesystemAdapter
     from preflights.adapters.fixed_clock import FixedClockProvider
     from preflights.adapters.in_memory_session import InMemorySessionAdapter
     from preflights.adapters.mock_llm import MockLLMAdapter
     from preflights.adapters.sequential_uid import SequentialUIDProvider
     from preflights.adapters.simple_file_context import SimpleFileContextBuilder
+    from preflights.adapters.isolated_filesystem import IsolatedFilesystemAdapter
 
     fs_adapter = filesystem_adapter
     if fs_adapter is None and base_path is not None:
-        fs_adapter = FakeFilesystemAdapter(base_path)
+        fs_adapter = IsolatedFilesystemAdapter(base_path)
     elif fs_adapter is None:
-        fs_adapter = FakeFilesystemAdapter()
+        fs_adapter = FilesystemAdapter()
 
     return PreflightsApp(
         session_adapter=session_adapter or InMemorySessionAdapter(),
