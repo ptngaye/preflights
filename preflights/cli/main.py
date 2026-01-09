@@ -33,6 +33,7 @@ from preflights.cli.output import (
     print_detected_from_intent,
     print_error,
     print_llm_fallback_warning,
+    print_llm_provider_info,
     print_needs_clarification,
     print_needs_more_answers,
     print_start_success,
@@ -314,16 +315,21 @@ def start(
 
             configure_llm(provider=llm_provider, strict_mode=llm_strict)
 
-        # 4. Call Application API
-        from preflights.application import get_llm_fallback_status, start_preflight
+        # 4. Display LLM provider info
+        from preflights.application import get_llm_fallback_status, get_llm_info, start_preflight
 
+        provider, model = get_llm_info()
+        if not json_output:
+            print_llm_provider_info(provider, model)
+
+        # 5. Call Application API
         result = start_preflight(intention, repo_root, debug_llm=debug_llm)
 
-        # 4b. Notify user if debug file was written
+        # 5b. Notify user if debug file was written
         if debug_llm and not json_output:
             click.echo(click.style("Debug: LLM prompt written to .preflights/debug/last_llm_prompt.md", fg="cyan"))
 
-        # 5. Check for LLM fallback and warn user
+        # 6. Check for LLM fallback and warn user
         if (llm or llm_provider) and get_llm_fallback_status():
             print_llm_fallback_warning("credentials missing or provider error", json_output)
 
@@ -664,21 +670,26 @@ def resume(
 
             configure_llm(provider=llm_provider, strict_mode=llm_strict)
 
-        # 5. Output resuming message
+        # 5. Display LLM provider info
+        from preflights.application import get_llm_fallback_status, get_llm_info, start_preflight
+
+        provider, model = get_llm_info()
+        if not json_output:
+            print_llm_provider_info(provider, model)
+
+        # 6. Output resuming message
         if not json_output:
             click.echo(click.style(f'Resuming: "{intention}"', fg="green", bold=True))
             click.echo("")
 
-        # 6. Call Application API
-        from preflights.application import get_llm_fallback_status, start_preflight
-
+        # 7. Call Application API
         result = start_preflight(intention, repo_root, debug_llm=debug_llm)
 
-        # 6b. Notify user if debug file was written
+        # 7b. Notify user if debug file was written
         if debug_llm and not json_output:
             click.echo(click.style("Debug: LLM prompt written to .preflights/debug/last_llm_prompt.md", fg="cyan"))
 
-        # 7. Check for LLM fallback and warn user
+        # 8. Check for LLM fallback and warn user
         if (llm or llm_provider) and get_llm_fallback_status():
             print_llm_fallback_warning("credentials missing or provider error", json_output)
 

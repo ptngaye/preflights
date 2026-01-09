@@ -344,6 +344,28 @@ def print_app_error(
             click.echo(f"\U0001f4a1 Hint: {hint}", err=True)
 
 
+def print_llm_provider_info(
+    provider: str,
+    model: str | None = None,
+    json_output: bool = False,
+) -> None:
+    """Display which LLM provider is being used."""
+    if json_output:
+        return  # Don't clutter JSON output
+
+    provider_display = {
+        "anthropic": "Claude (Anthropic)",
+        "openai": "GPT (OpenAI)",
+        "openrouter": "OpenRouter",
+        "mock": "Mock (deterministic)",
+    }.get(provider, provider)
+
+    if model:
+        click.echo(click.style(f"LLM: {provider_display} ({model})", fg="cyan"))
+    else:
+        click.echo(click.style(f"LLM: {provider_display}", fg="cyan"))
+
+
 def print_llm_fallback_warning(
     reason: str,
     json_output: bool = False,

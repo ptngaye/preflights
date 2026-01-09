@@ -105,6 +105,18 @@ def get_llm_fallback_status() -> bool:
     return getattr(app._llm, "_is_fallback", False)
 
 
+def get_llm_info() -> tuple[str, str | None]:
+    """Get current LLM provider and model info.
+
+    Returns:
+        Tuple of (provider, model) where model may be None for mock.
+    """
+    app = _get_default_app()
+    provider = getattr(app._llm, "provider", "mock")
+    model = getattr(app._llm, "_model", None)
+    return (provider, model)
+
+
 def start_preflight(
     intention: str,
     repo_path: str,
@@ -246,4 +258,5 @@ __all__ = [
     # LLM configuration
     "configure_llm",
     "get_llm_fallback_status",
+    "get_llm_info",
 ]
