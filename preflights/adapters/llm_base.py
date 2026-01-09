@@ -10,6 +10,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 
+from preflights.adapters.llm_debug import write_llm_debug
 from preflights.adapters.llm_errors import (
     LLMInvalidResponseError,
     LLMProviderError,
@@ -84,6 +85,9 @@ class BaseLLMAdapter(ABC):
         heuristics_config: HeuristicsConfig,
         context: LLMContext | None = None,
         session_state: SessionSnapshot | None = None,
+        *,
+        debug_llm: bool = False,
+        repo_path: str | None = None,
     ) -> LLMResponse:
         """
         Generate clarification questions with retry logic.
@@ -93,6 +97,8 @@ class BaseLLMAdapter(ABC):
             heuristics_config: Schema and heuristics configuration
             context: Optional filtered context
             session_state: Optional session snapshot for cross-session tracking
+            debug_llm: If True, write prompt to debug file
+            repo_path: Repository path (required if debug_llm=True)
 
         Returns:
             LLMResponse with questions and semantic tracking
@@ -100,6 +106,18 @@ class BaseLLMAdapter(ABC):
         user_message = self._build_question_prompt(
             intention, heuristics_config, context, session_state
         )
+
+        # Write debug file BEFORE calling LLM
+        if debug_llm and repo_path:
+            write_llm_debug(
+                repo_path=repo_path,
+                operation="generate_questions",
+                system_prompt=CLARIFICATION_SYSTEM_PROMPT,
+                user_message=user_message,
+                tools=[CLARIFICATION_TOOL_SCHEMA],
+                model=self._model,
+                provider=self._config.provider,
+            )
 
         for attempt in range(self._config.max_retries + 1):
             try:
@@ -125,6 +143,9 @@ class BaseLLMAdapter(ABC):
         intention: str,
         answers: dict[str, str | tuple[str, ...]],
         heuristics_config: HeuristicsConfig,
+        *,
+        debug_llm: bool = False,
+        repo_path: str | None = None,
     ) -> DecisionPatch | None:
         """
         Extract structured DecisionPatch from answers.
@@ -133,6 +154,8 @@ class BaseLLMAdapter(ABC):
             intention: User's intention text
             answers: Question ID -> answer mapping
             heuristics_config: Schema for validation
+            debug_llm: If True, write prompt to debug file
+            repo_path: Repository path (required if debug_llm=True)
 
         Returns:
             DecisionPatch if extraction successful, None if failed
@@ -140,6 +163,18 @@ class BaseLLMAdapter(ABC):
         user_message = self._build_extraction_prompt(
             intention, answers, heuristics_config
         )
+
+        # Write debug file BEFORE calling LLM (append to existing)
+        if debug_llm and repo_path:
+            write_llm_debug(
+                repo_path=repo_path,
+                operation="extract_decision_patch",
+                system_prompt=EXTRACTION_SYSTEM_PROMPT,
+                user_message=user_message,
+                tools=[DECISION_TOOL_SCHEMA],
+                model=self._model,
+                provider=self._config.provider,
+            )
 
         for attempt in range(self._config.max_retries + 1):
             try:

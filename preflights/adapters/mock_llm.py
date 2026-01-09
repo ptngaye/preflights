@@ -4,6 +4,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal
 
+from preflights.adapters.llm_debug import write_llm_debug
+from preflights.adapters.llm_prompts import (
+    CLARIFICATION_SYSTEM_PROMPT,
+    CLARIFICATION_TOOL_SCHEMA,
+    DECISION_TOOL_SCHEMA,
+    EXTRACTION_SYSTEM_PROMPT,
+)
 from preflights.application.types import LLMContext, LLMResponse, Question, SessionSnapshot
 from preflights.core.types import DecisionPatch, HeuristicsConfig
 
@@ -111,17 +118,94 @@ class MockLLMAdapter:
 
         return str(value)
 
+    def _build_question_prompt(
+        self,
+        intention: str,
+        heuristics_config: HeuristicsConfig,
+        context: LLMContext | None,
+        session_state: SessionSnapshot | None,
+    ) -> str:
+        """Build user message for question generation (for debug output)."""
+        parts = [f"User intention: {intention}"]
+
+        # Add schema information
+        categories = [cat for cat, _ in heuristics_config.schema.categories]
+        parts.append(f"\nAvailable categories: {', '.join(categories)}")
+
+        # Add context if provided
+        if context:
+            parts.append(f"\nRepository summary:\n{context.file_summary}")
+            if context.architecture_summary:
+                parts.append(f"\nExisting architecture:\n{context.architecture_summary}")
+
+        # Add session state if provided
+        if session_state:
+            if session_state.asked_questions:
+                parts.append(
+                    f"\nAlready asked questions: {', '.join(session_state.asked_questions)}"
+                )
+            if session_state.missing_info:
+                parts.append(
+                    f"\nStill missing information: {', '.join(session_state.missing_info)}"
+                )
+
+        parts.append("\nGenerate clarification questions to understand this intention better.")
+
+        return "\n".join(parts)
+
+    def _build_extraction_prompt(
+        self,
+        intention: str,
+        answers: dict[str, str | tuple[str, ...]],
+        heuristics_config: HeuristicsConfig,
+    ) -> str:
+        """Build user message for decision extraction (for debug output)."""
+        parts = [f"User intention: {intention}"]
+
+        # Add answers
+        parts.append("\nClarification answers:")
+        for q_id, answer in answers.items():
+            if isinstance(answer, tuple):
+                answer_str = ", ".join(answer)
+            else:
+                answer_str = answer
+            parts.append(f"  - {q_id}: {answer_str}")
+
+        # Add schema information
+        categories = [cat for cat, _ in heuristics_config.schema.categories]
+        parts.append(f"\nAvailable categories: {', '.join(categories)}")
+
+        parts.append("\nExtract the architecture decision from these answers.")
+
+        return "\n".join(parts)
+
     def generate_questions(
         self,
         intention: str,
         heuristics_config: HeuristicsConfig,
         context: LLMContext | None = None,
         session_state: SessionSnapshot | None = None,
+        *,
+        debug_llm: bool = False,
+        repo_path: str | None = None,
     ) -> LLMResponse:
         """Generate deterministic questions based on keywords.
 
         Returns LLMResponse with questions and semantic tracking fields.
         """
+        # Write debug file if requested
+        if debug_llm and repo_path:
+            user_message = self._build_question_prompt(intention, heuristics_config, context, session_state)
+            write_llm_debug(
+                repo_path=repo_path,
+                operation="generate_questions",
+                system_prompt=CLARIFICATION_SYSTEM_PROMPT,
+                user_message=user_message,
+                tools=[CLARIFICATION_TOOL_SCHEMA],
+                model="mock",
+                provider="mock",
+            )
+
         # Use override if set
         if self._override_questions is not None:
             override_questions = self._override_questions
@@ -226,8 +310,24 @@ class MockLLMAdapter:
         intention: str,
         answers: dict[str, str | tuple[str, ...]],
         heuristics_config: HeuristicsConfig,
+        *,
+        debug_llm: bool = False,
+        repo_path: str | None = None,
     ) -> DecisionPatch | None:
         """Extract DecisionPatch from answers."""
+        # Write debug file if requested
+        if debug_llm and repo_path:
+            user_message = self._build_extraction_prompt(intention, answers, heuristics_config)
+            write_llm_debug(
+                repo_path=repo_path,
+                operation="extract_decision_patch",
+                system_prompt=EXTRACTION_SYSTEM_PROMPT,
+                user_message=user_message,
+                tools=[DECISION_TOOL_SCHEMA],
+                model="mock",
+                provider="mock",
+            )
+
         if self._force_extraction_failure:
             return None
 

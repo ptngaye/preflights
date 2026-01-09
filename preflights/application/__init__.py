@@ -68,10 +68,10 @@ def _get_default_app() -> PreflightsApp:
     from preflights.adapters.default_config import DefaultConfigLoader
     from preflights.adapters.file_session import FileSessionAdapter
     from preflights.adapters.filesystem import FilesystemAdapter
-    from preflights.adapters.fixed_clock import FixedClockProvider
     from preflights.adapters.mock_llm import MockLLMAdapter
-    from preflights.adapters.sequential_uid import SequentialUIDProvider
+    from preflights.adapters.random_uid import RandomUIDProvider
     from preflights.adapters.simple_file_context import SimpleFileContextBuilder
+    from preflights.adapters.system_clock import SystemClockProvider
 
     global _default_app
     if _default_app is None:
@@ -91,8 +91,8 @@ def _get_default_app() -> PreflightsApp:
             session_adapter=FileSessionAdapter(),
             llm_adapter=llm_adapter,
             filesystem_adapter=FilesystemAdapter(),
-            uid_provider=SequentialUIDProvider(),
-            clock_provider=FixedClockProvider(),
+            uid_provider=RandomUIDProvider(),
+            clock_provider=SystemClockProvider(),
             file_context_builder=SimpleFileContextBuilder(),
             config_loader=DefaultConfigLoader(),
         )
@@ -108,6 +108,8 @@ def get_llm_fallback_status() -> bool:
 def start_preflight(
     intention: str,
     repo_path: str,
+    *,
+    debug_llm: bool = False,
 ) -> PreflightStartResult:
     """
     Start a new clarification session.
@@ -115,6 +117,7 @@ def start_preflight(
     Args:
         intention: User's intention (e.g., "Add authentication")
         repo_path: Absolute path to repository root
+        debug_llm: If True, write LLM prompt to .preflights/debug/last_llm_prompt.md
 
     Returns:
         PreflightStartResult with session_id + initial questions
@@ -130,12 +133,14 @@ def start_preflight(
             print(f"  {q.question}")
     """
     app = _get_default_app()
-    return app.start_preflight(intention, repo_path)
+    return app.start_preflight(intention, repo_path, debug_llm=debug_llm)
 
 
 def continue_preflight(
     session_id: str,
     answers_delta: dict[str, str | list[str]],
+    *,
+    debug_llm: bool = False,
 ) -> PreflightContinueResult:
     """
     Continue clarification with new answers.
@@ -147,6 +152,7 @@ def continue_preflight(
                 "question_id": "single_answer",  # For single_choice / free_text
                 "question_id": ["answer1", "answer2"]  # For multi_choice
             }
+        debug_llm: If True, write LLM prompt to .preflights/debug/last_llm_prompt.md
 
     Returns:
         PreflightContinueResult with one of:
@@ -165,7 +171,7 @@ def continue_preflight(
             print(f"Task: {result.artifacts.task_path}")
     """
     app = _get_default_app()
-    return app.continue_preflight(session_id, answers_delta)
+    return app.continue_preflight(session_id, answers_delta, debug_llm=debug_llm)
 
 
 def create_app(

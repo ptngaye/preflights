@@ -80,22 +80,51 @@ def format_questions_json(questions: list[StoredQuestion]) -> list[dict[str, Any
     return result
 
 
+def print_detected_from_intent(
+    detected_pairs: tuple[tuple[str, str], ...],
+    json_output: bool = False,
+) -> None:
+    """Print values detected from intention (V1.1 intent extraction)."""
+    if not detected_pairs:
+        return
+
+    if json_output:
+        # JSON output handled in print_start_success
+        return
+
+    click.echo(click.style("Detected from intention:", fg="cyan"))
+    for label, value in detected_pairs:
+        click.echo(f"  {label}: {click.style(value, fg='green', bold=True)}")
+    click.echo("")
+
+
 def print_start_success(
     state: SessionState,
     json_output: bool = False,
+    detected_from_intent: tuple[tuple[str, str], ...] = (),
 ) -> None:
     """Print start command success output."""
     if json_output:
-        output = {
+        output: dict[str, Any] = {
             "status": "started",
             "session_id": state.session_id,
             "expires_at": state.expires_at,
             "questions": format_questions_json(state.questions),
         }
+        if detected_from_intent:
+            output["detected_from_intent"] = [
+                {"label": label, "value": value}
+                for label, value in detected_from_intent
+            ]
         click.echo(json.dumps(output, indent=2))
     else:
         click.echo("Session started (expires in 30m)")
         click.echo("")
+
+        # Display detected values first if any
+        if detected_from_intent:
+            print_detected_from_intent(detected_from_intent)
+
         click.echo("Questions to answer:")
         click.echo("")
         click.echo(format_questions_human(state.questions))

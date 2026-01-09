@@ -11,6 +11,67 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 # =============================================================================
+# INTENT EXTRACTION TYPES
+# =============================================================================
+
+
+@dataclass(frozen=True)
+class ExtractedEntity:
+    """
+    An entity extracted from user intention.
+
+    Represents an explicit mention that maps to a schema field.
+    """
+
+    field_id: str  # Semantic ID: "auth_strategy", "db_type", etc.
+    value: str  # Normalized value: "OAuth", "PostgreSQL", etc.
+    confidence: float  # 0.0 - 1.0 (1.0 = exact match with word boundaries)
+    source_span: tuple[int, int]  # (start, end) position in original text
+
+
+@dataclass(frozen=True)
+class ExplicitIntent:
+    """
+    Result of semantic parsing of user intention.
+
+    Contains all explicitly mentioned entities with confidence scores.
+    Used to pre-fill answers and skip redundant questions.
+    """
+
+    raw_text: str
+    entities: tuple[ExtractedEntity, ...]
+    detected_category: str | None = None  # Dominant category if detectable
+
+    def get_explicit_value(self, field_id: str, min_confidence: float = 0.9) -> str | None:
+        """
+        Get explicit value for a field if confidence meets threshold.
+
+        Args:
+            field_id: The semantic field ID (e.g., "auth_strategy")
+            min_confidence: Minimum confidence required (default 0.9)
+
+        Returns:
+            The normalized value if found with sufficient confidence, else None
+        """
+        for entity in self.entities:
+            if entity.field_id == field_id and entity.confidence >= min_confidence:
+                return entity.value
+        return None
+
+    def is_explicit(self, field_id: str, min_confidence: float = 0.9) -> bool:
+        """Check if field has an explicit value meeting confidence threshold."""
+        return self.get_explicit_value(field_id, min_confidence) is not None
+
+    def get_all_explicit(self, min_confidence: float = 0.9) -> tuple[tuple[str, str], ...]:
+        """Get all explicit (field_id, value) pairs meeting threshold."""
+        return tuple(
+            (e.field_id, e.value)
+            for e in self.entities
+            if e.confidence >= min_confidence
+        )
+
+
+# =============================================================================
 # INPUT TYPES
 # =============================================================================
 
