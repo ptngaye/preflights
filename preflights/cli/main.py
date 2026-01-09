@@ -217,7 +217,7 @@ def _run_interactive_loop(repo_root: str, state: SessionState) -> None:
 
 # Click CLI application
 @click.group()
-@click.version_option(version="1.0.0", prog_name="preflights")
+@click.version_option(version="1.1.2", prog_name="preflights")
 def app() -> None:
     """Preflights - Architecture Decision Automation."""
     pass
