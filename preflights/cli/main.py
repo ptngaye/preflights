@@ -30,6 +30,7 @@ from preflights.cli.output import (
     OTHER_SPECIFY,
     print_app_error,
     print_completed,
+    print_detected_from_intent,
     print_error,
     print_llm_fallback_warning,
     print_needs_clarification,
@@ -254,6 +255,11 @@ def app() -> None:
     default=None,
     help="Override LLM provider (implies --llm)",
 )
+@click.option(
+    "--debug-llm",
+    is_flag=True,
+    help="Write LLM prompts to .preflights/debug/last_llm_prompt.md",
+)
 def start(
     intention: str,
     repo_path: str | None,
@@ -262,6 +268,7 @@ def start(
     llm: bool,
     llm_strict: bool,
     llm_provider: str | None,
+    debug_llm: bool,
 ) -> None:
     """Start a new preflight session.
 
@@ -274,6 +281,7 @@ def start(
 
     Use --llm to enable real LLM providers (requires API key).
     Use --llm-strict to fail on LLM errors instead of falling back to mock.
+    Use --debug-llm to write LLM prompts to .preflights/debug/ for debugging.
     """
     # --json implies non-interactive
     if json_output:
@@ -309,7 +317,11 @@ def start(
         # 4. Call Application API
         from preflights.application import get_llm_fallback_status, start_preflight
 
-        result = start_preflight(intention, repo_root)
+        result = start_preflight(intention, repo_root, debug_llm=debug_llm)
+
+        # 4b. Notify user if debug file was written
+        if debug_llm and not json_output:
+            click.echo(click.style("Debug: LLM prompt written to .preflights/debug/last_llm_prompt.md", fg="cyan"))
 
         # 5. Check for LLM fallback and warn user
         if (llm or llm_provider) and get_llm_fallback_status():
@@ -326,12 +338,17 @@ def start(
 
         # 5. Non-interactive mode: display and exit
         if non_interactive:
-            print_start_success(state, json_output)
+            print_start_success(state, json_output, result.detected_from_intent)
             return
 
         # 6. Interactive mode: display header and run loop
         click.echo(click.style(f'Starting preflight: "{intention}"', fg="green", bold=True))
         click.echo(f"Session expires in {SESSION_DURATION_MINUTES} minutes")
+
+        # Display detected values from intent extraction (V1.1)
+        if result.detected_from_intent:
+            click.echo("")
+            print_detected_from_intent(result.detected_from_intent)
 
         _run_interactive_loop(repo_root, state)
 
@@ -593,6 +610,11 @@ def status(repo_path: str | None, json_output: bool) -> None:
     default=None,
     help="Override LLM provider (implies --llm)",
 )
+@click.option(
+    "--debug-llm",
+    is_flag=True,
+    help="Write LLM prompts to .preflights/debug/last_llm_prompt.md",
+)
 def resume(
     repo_path: str | None,
     non_interactive: bool,
@@ -600,11 +622,13 @@ def resume(
     llm: bool,
     llm_strict: bool,
     llm_provider: str | None,
+    debug_llm: bool,
 ) -> None:
     """Resume after session expiration or error.
 
     By default, runs in interactive mode.
     Use --llm to enable real LLM providers.
+    Use --debug-llm to write LLM prompts to .preflights/debug/ for debugging.
     """
     # --json implies non-interactive
     if json_output:
@@ -648,7 +672,11 @@ def resume(
         # 6. Call Application API
         from preflights.application import get_llm_fallback_status, start_preflight
 
-        result = start_preflight(intention, repo_root)
+        result = start_preflight(intention, repo_root, debug_llm=debug_llm)
+
+        # 6b. Notify user if debug file was written
+        if debug_llm and not json_output:
+            click.echo(click.style("Debug: LLM prompt written to .preflights/debug/last_llm_prompt.md", fg="cyan"))
 
         # 7. Check for LLM fallback and warn user
         if (llm or llm_provider) and get_llm_fallback_status():
@@ -664,10 +692,14 @@ def resume(
 
         # 9. Non-interactive mode: display and exit
         if non_interactive:
-            print_start_success(state, json_output)
+            print_start_success(state, json_output, result.detected_from_intent)
             return
 
-        # 10. Interactive mode: run loop
+        # 10. Display detected values from intent extraction (V1.1)
+        if result.detected_from_intent:
+            print_detected_from_intent(result.detected_from_intent)
+
+        # 11. Interactive mode: run loop
         _run_interactive_loop(repo_root, state)
 
     except CLIError as e:

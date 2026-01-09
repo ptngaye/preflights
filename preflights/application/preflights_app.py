@@ -19,6 +19,8 @@ from preflights.application.ports.llm import LLMPort
 from preflights.application.ports.session import SessionPort
 from preflights.application.ports.uid import UIDProviderPort
 from preflights.application.prompt_builder import AGENT_PROMPT_PATH, build_agent_prompt
+from preflights.application.extraction_config import default_extraction_config
+from preflights.application.question_filter import filter_questions, merge_answers
 from preflights.application.types import (
     AppErrorCode,
     PreflightArtifacts,
@@ -28,6 +30,7 @@ from preflights.application.types import (
     Question,
     Session,
 )
+from preflights.core.intent_extractor import extract_intent
 from preflights.core.process import process as core_process
 from preflights.core.types import (
     Answer,
@@ -89,6 +92,8 @@ class PreflightsApp:
         self,
         intention: str,
         repo_path: str,
+        *,
+        debug_llm: bool = False,
     ) -> PreflightStartResult:
         """
         Start a new clarification session.
@@ -98,8 +103,9 @@ class PreflightsApp:
         2. Load configuration
         3. Build file context
         4. Generate questions via LLM
-        5. Create session
-        6. Return session_id + questions
+        5. Extract explicit intent and filter questions (V1.1)
+        6. Create session
+        7. Return session_id + remaining questions + detected values
         """
         # 1. Validate repo exists
         if not self._fs.repo_exists(repo_path):
@@ -121,9 +127,25 @@ class PreflightsApp:
             heuristics_config=heuristics_config,
             context=None,
             session_state=None,
+            debug_llm=debug_llm,
+            repo_path=repo_path,
         )
 
-        # 5. Create session with LLM tracking
+        # 5. Extract explicit intent and filter questions (V1.1)
+        extraction_config = default_extraction_config()
+        explicit_intent = extract_intent(
+            intention=Intention(text=intention),
+            vocabulary=extraction_config.vocabulary,
+            field_categories=extraction_config.field_categories,
+        )
+
+        filter_result = filter_questions(
+            questions=llm_response.questions,
+            explicit_intent=explicit_intent,
+            skip_threshold=extraction_config.skip_threshold,
+        )
+
+        # 6. Create session with LLM tracking + intent extraction
         now = self._clock.now_unix()
         session_id = self._uid.generate_session_id()
 
@@ -137,7 +159,7 @@ class PreflightsApp:
             intention=intention,
             created_at=now,
             expires_at=now + self.SESSION_TTL_SECONDS,
-            asked_questions=llm_response.questions,
+            asked_questions=filter_result.remaining_questions,
             answers={},
             core_questions_asked=(),
             all_answers={},
@@ -146,19 +168,25 @@ class PreflightsApp:
             decision_hint=llm_response.decision_hint,
             llm_provider_used=llm_provider_used,
             llm_fallback_occurred=llm_fallback_occurred,
+            # V1.1: Intent extraction
+            prefilled_answers=filter_result.prefilled_answers,
+            detected_from_intent=filter_result.detected_pairs,
         )
         self._session.create(session)
 
-        # 6. Return result
+        # 7. Return result with remaining questions + detected values
         return PreflightStartResult(
             session_id=session_id,
-            questions=llm_response.questions,
+            questions=filter_result.remaining_questions,
+            detected_from_intent=filter_result.detected_pairs,
         )
 
     def continue_preflight(
         self,
         session_id: str,
         answers_delta: dict[str, str | list[str]],
+        *,
+        debug_llm: bool = False,
     ) -> PreflightContinueResult:
         """
         Continue clarification with new answers.
@@ -201,14 +229,23 @@ class PreflightsApp:
                 ),
             )
 
-        # 2. Merge answers_delta
+        # 2. Merge answers_delta with existing + prefilled answers
+        # Priority: new answers > existing answers > prefilled
+        # First normalize answers_delta (list -> tuple for consistency)
+        normalized_delta: dict[str, str | tuple[str, ...]] = {}
         for question_id, answer in answers_delta.items():
             if isinstance(answer, list):
-                session.answers[question_id] = tuple(answer)
-                session.all_answers[question_id] = tuple(answer)
+                normalized_delta[question_id] = tuple(answer)
             else:
-                session.answers[question_id] = answer
-                session.all_answers[question_id] = answer
+                normalized_delta[question_id] = answer
+
+        # Merge: prefilled + existing session answers + new delta
+        merged = merge_answers(session.prefilled_answers, session.answers)
+        merged = merge_answers(merged, normalized_delta)
+
+        # Update session with merged answers
+        session.answers = dict(merged)
+        session.all_answers = dict(merged)
 
         # 3. Check if all required questions answered (Application responsibility)
         unanswered_required = self._get_unanswered_required_questions(session)
@@ -228,6 +265,8 @@ class PreflightsApp:
             intention=session.intention,
             answers=session.all_answers,
             heuristics_config=heuristics_config,
+            debug_llm=debug_llm,
+            repo_path=session.repo_path,
         )
 
         if patch is None:

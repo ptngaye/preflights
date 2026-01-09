@@ -34,6 +34,9 @@ class LLMPort(Protocol):
         heuristics_config: HeuristicsConfig,
         context: LLMContext | None = None,
         session_state: SessionSnapshot | None = None,
+        *,
+        debug_llm: bool = False,
+        repo_path: str | None = None,
     ) -> LLMResponse:
         """
         Generate clarification questions based on intention.
@@ -43,6 +46,8 @@ class LLMPort(Protocol):
             heuristics_config: Schema and heuristics configuration
             context: Optional filtered and redacted context
             session_state: Optional session snapshot for cross-session tracking
+            debug_llm: If True, write prompt to .preflights/debug/last_llm_prompt.md
+            repo_path: Repository path (required if debug_llm=True)
 
         Returns:
             LLMResponse with questions and semantic tracking fields
@@ -54,6 +59,9 @@ class LLMPort(Protocol):
         intention: str,
         answers: dict[str, str | tuple[str, ...]],
         heuristics_config: HeuristicsConfig,
+        *,
+        debug_llm: bool = False,
+        repo_path: str | None = None,
     ) -> DecisionPatch | None:
         """
         Extract structured DecisionPatch from answers.
@@ -62,6 +70,8 @@ class LLMPort(Protocol):
             intention: User's intention text
             answers: Question ID -> answer mapping
             heuristics_config: Schema for validation
+            debug_llm: If True, write prompt to .preflights/debug/last_llm_prompt.md
+            repo_path: Repository path (required if debug_llm=True)
 
         Returns:
             DecisionPatch if extraction successful, None if failed

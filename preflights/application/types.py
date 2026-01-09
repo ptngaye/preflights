@@ -89,6 +89,8 @@ class PreflightStartResult:
 
     session_id: str
     questions: tuple[Question, ...]
+    # V1.1: Optional metadata - values detected from user intention (backward-compatible)
+    detected_from_intent: tuple[tuple[str, str], ...] = ()  # (label, value) pairs
 
 
 @dataclass(frozen=True)
@@ -187,6 +189,10 @@ class Session:
     decision_hint: str | None = None  # "task" | "adr" | "unsure" (informative only)
     llm_provider_used: str | None = None  # Track which provider was used
     llm_fallback_occurred: bool = False  # Track if fallback happened
+
+    # V1.1: Intent extraction tracking
+    prefilled_answers: dict[str, str | tuple[str, ...]] = field(default_factory=dict)
+    detected_from_intent: tuple[tuple[str, str], ...] = ()  # For UX display
 
     def is_expired(self, current_time: float) -> bool:
         """Check if session has expired."""
